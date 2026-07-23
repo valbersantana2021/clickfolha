@@ -1,0 +1,29 @@
+Codigo;Descricao;Referencia;Valor
+004;Pró-labore;;2.904,00
+010;Salário-Família;;337,70
+011;Salário-Base;;117.807,95
+049;Descanso Semanal Remunerado;347 dia(s);4.799,05
+050;Adicional Noturno 20%;139h52min;211,78
+060;Hora Extra 50%;596h51min;6.922,13
+061;Hora Extra 100%;351h08min;5.576,63
+090;Líquido Negativo;;652,81
+092;Arredondamento Compensação;;36,53
+100;Provisão Cred. Trab.- Provento;;368,54
+127;Consignado Crédito Trabalhador;;3.412,90
+300;Adiantamento Compensação;;53.470,00
+310;INSS;;21.634,88
+311;IRRF;;3.784,64
+320;Vale-Transporte;;1.099,34
+322;Mensalidade Sindical 2%;;433,03
+330;Vale;;16.621,00
+391;Arredondamento Desconto;;30,79
+625;Quebra de Caixa 10%;;333,12
+659;Taxa de Serviço/Gorgeta;;89.949,90
+905;Hora Extra c/50% Noturno;485h11min;6.611,62
+908;VALE TRANSPORTE;;0,52
+928;Consignado Crédito Trabalhador;;1.631,23
+929;Consignado Crédito Trabalhador;;714,53
+930;Consignado Crédito Trabalhador;;1.320,67
+931;Consignado Crédito Trabalhador;;439,41
+932;Consignado Crédito Trabalhador;;342,53
+933;Consignado Crédito Trabalhador;;142,29

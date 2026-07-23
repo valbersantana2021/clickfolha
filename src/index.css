@@ -1,0 +1,62 @@
+﻿@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 98%;
+    --foreground: 224 71.4% 4.1%;
+    --card: 0 0% 100%;
+    --card-foreground: 224 71.4% 4.1%;
+    --primary: 220.9 39.3% 11%;
+    --primary-foreground: 210 20% 98%;
+    --secondary: 220 14.3% 95.9%;
+    --secondary-foreground: 220.9 39.3% 11%;
+    --muted: 220 14.3% 95.9%;
+    --muted-foreground: 220 8.9% 46.1%;
+    --accent: 220 14.3% 95.9%;
+    --accent-foreground: 220.9 39.3% 11%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 20% 98%;
+    --border: 37 32% 83%;
+    --input: 37 32% 83%;
+    --ring: 224 71.4% 4.1%;
+    --radius: 0.5rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+}
+
+@layer components {
+  /* FluxoGov technical grid background, light amber mode (see .llm/clickfolha_background.png) */
+  .fg-grid-bg {
+    background-image:
+      linear-gradient(to right, rgba(26, 20, 15, 0.05) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(26, 20, 15, 0.05) 1px, transparent 1px);
+    background-size: 64px 64px;
+    mask-image: radial-gradient(ellipse 80% 80% at 50% 40%, black 40%, transparent 100%);
+    -webkit-mask-image: radial-gradient(ellipse 80% 80% at 50% 40%, black 40%, transparent 100%);
+  }
+
+  .fg-glow {
+    filter: blur(90px);
+    pointer-events: none;
+  }
+
+  .fg-pill {
+    @apply inline-flex w-fit items-center gap-2 rounded-full border border-fg-hairline bg-fg-ink-2/60 px-3 py-1 backdrop-blur;
+  }
+
+  .fg-pill-dot {
+    @apply h-1.5 w-1.5 rounded-full bg-fg-brand;
+    box-shadow: 0 0 8px 2px rgba(37, 99, 235, 0.6);
+  }
+}
