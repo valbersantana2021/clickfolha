@@ -110,6 +110,7 @@ export function ConvertPage() {
   // Step 1 state
   const [clientId, setClientId] = useState(searchParams.get('client') ?? '')
   const [newClientName, setNewClientName] = useState('')
+  const [newClientCodEmpresa, setNewClientCodEmpresa] = useState('')
   const [showNewClient, setShowNewClient] = useState(false)
   const [file, setFile] = useState<File | null>(null)
   const [selectedSheet, setSelectedSheet] = useState(0)
@@ -209,10 +210,12 @@ export function ConvertPage() {
 
   const handleCreateClient = () => {
     const name = newClientName.trim()
-    if (!name) return
-    const st = createSubTenant({ name })
+    const codEmpresa = newClientCodEmpresa.trim()
+    if (!name || !codEmpresa) return
+    const st = createSubTenant({ name, cod_empresa: codEmpresa })
     setClientId(st.id)
     setNewClientName('')
+    setNewClientCodEmpresa('')
     setShowNewClient(false)
     toast.success(`Cliente "${name}" criado.`)
   }
@@ -352,7 +355,8 @@ export function ConvertPage() {
 
   const handleDownload = () => {
     if (!file || !tenant) return
-    const csv = generateCsv(outputRows)
+    const codEmpresa = subTenants.find(s => s.id === clientId)?.cod_empresa ?? ''
+    const csv = generateCsv(outputRows, codEmpresa)
     downloadCsv(csv, buildCsvFileName(layoutName))
     logConversion({
       tenant_id: tenant.id,
@@ -436,8 +440,18 @@ export function ConvertPage() {
                   placeholder="Nome da empresa"
                   className="w-full rounded-lg border border-fg-hairline px-3 py-2.5 text-sm focus:border-fg-brand focus:outline-none focus:ring-1 focus:ring-fg-brand"
                 />
+                <input
+                  value={newClientCodEmpresa}
+                  onChange={e => setNewClientCodEmpresa(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') handleCreateClient()
+                    if (e.key === 'Escape') setShowNewClient(false)
+                  }}
+                  placeholder="Código da Empresa (ex: 0006)"
+                  className="w-full rounded-lg border border-fg-hairline px-3 py-2.5 text-sm focus:border-fg-brand focus:outline-none focus:ring-1 focus:ring-fg-brand"
+                />
                 <div className="flex gap-2">
-                  <button onClick={handleCreateClient} disabled={!newClientName.trim()}
+                  <button onClick={handleCreateClient} disabled={!newClientName.trim() || !newClientCodEmpresa.trim()}
                     className="rounded-lg bg-fg-brand px-4 py-2 text-sm font-medium text-white hover:bg-fg-brand-2 disabled:opacity-50">
                     Criar
                   </button>
@@ -731,7 +745,7 @@ export function ConvertPage() {
               Ver CSV bruto
             </summary>
             <pre className="mt-2 overflow-x-auto rounded-lg border bg-gray-900 p-4 text-xs text-green-400">
-              {generateCsv(outputRows.slice(0, 5))}
+              {generateCsv(outputRows.slice(0, 5), subTenants.find(s => s.id === clientId)?.cod_empresa ?? '')}
               {outputRows.length > 5 ? '\n...' : ''}
             </pre>
           </details>

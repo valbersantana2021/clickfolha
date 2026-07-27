@@ -2,7 +2,7 @@
 
 ## 1. Inicialização e Estrutura Básica do Layout
 *   O sistema cria o arquivo em memória e escreve as duas primeiras linhas obrigatórias do layout posicional.
-*   **Linha 1:** A tag fixa do layout `01TC0006,,,`.
+*   **Linha 1:** A tag fixa do layout `01TC0011,,,`.
 *   **Linha 2:** Os nomes das colunas exigidos: `Cód.Empregado,Cód. Evento,Referência,Valor do Evento`.
 *   São iniciados dois contadores zerados: um para a **quantidade de registros** e outro para a **soma total de valores** (utilizados no rodapé).
 

@@ -26,17 +26,20 @@ export function ClientsPage() {
   const { subTenants, createSubTenant, deleteSubTenant, getLayoutsForClient } = useData()
   const [newName, setNewName] = useState('')
   const [newCnpj, setNewCnpj] = useState('')
+  const [newCodEmpresa, setNewCodEmpresa] = useState('')
   const [showForm, setShowForm] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
 
   useEffect(() => { document.title = 'Clientes | ClickFolha' }, [])
 
+  const resetForm = () => { setNewName(''); setNewCnpj(''); setNewCodEmpresa('') }
+
   const handleCreate = () => {
     const name = newName.trim()
-    if (!name) return
-    createSubTenant({ name, cnpj: newCnpj.trim() || undefined })
-    setNewName('')
-    setNewCnpj('')
+    const codEmpresa = newCodEmpresa.trim()
+    if (!name || !codEmpresa) return
+    createSubTenant({ name, cod_empresa: codEmpresa, cnpj: newCnpj.trim() || undefined })
+    resetForm()
     setShowForm(false)
     toast.success(`Cliente "${name}" criado.`)
   }
@@ -70,15 +73,15 @@ export function ClientsPage() {
       {showForm && (
         <div className="mb-6 rounded-xl border bg-white p-5 shadow-sm">
           <p className="mb-4 text-sm font-medium text-fg-cream">Novo cliente</p>
-          <div className="mb-3 grid grid-cols-2 gap-3">
+          <div className="mb-3 grid grid-cols-3 gap-3">
             <div>
-              <label className="mb-1 block text-xs font-medium text-fg-muted">Nome do cliente *</label>
+              <label className="mb-1 block text-xs font-medium text-fg-muted">Código da Empresa *</label>
               <input
                 autoFocus
-                value={newName}
-                onChange={e => setNewName(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') handleCreate(); if (e.key === 'Escape') { setShowForm(false); setNewCnpj('') } }}
-                placeholder="Ex: Padaria São João Ltda"
+                value={newCodEmpresa}
+                onChange={e => setNewCodEmpresa(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') handleCreate(); if (e.key === 'Escape') { setShowForm(false); resetForm() } }}
+                placeholder="Ex: 0006"
                 className="w-full rounded-lg border border-fg-hairline px-3 py-2 text-sm focus:border-fg-brand focus:outline-none focus:ring-1 focus:ring-fg-brand"
               />
             </div>
@@ -87,22 +90,32 @@ export function ClientsPage() {
               <input
                 value={newCnpj}
                 onChange={e => setNewCnpj(formatCNPJ(e.target.value))}
-                onKeyDown={e => { if (e.key === 'Enter') handleCreate(); if (e.key === 'Escape') { setShowForm(false); setNewCnpj('') } }}
+                onKeyDown={e => { if (e.key === 'Enter') handleCreate(); if (e.key === 'Escape') { setShowForm(false); resetForm() } }}
                 placeholder="00.000.000/0000-00"
+                className="w-full rounded-lg border border-fg-hairline px-3 py-2 text-sm focus:border-fg-brand focus:outline-none focus:ring-1 focus:ring-fg-brand"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-fg-muted">Empresa (nome) *</label>
+              <input
+                value={newName}
+                onChange={e => setNewName(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') handleCreate(); if (e.key === 'Escape') { setShowForm(false); resetForm() } }}
+                placeholder="Ex: Padaria São João Ltda"
                 className="w-full rounded-lg border border-fg-hairline px-3 py-2 text-sm focus:border-fg-brand focus:outline-none focus:ring-1 focus:ring-fg-brand"
               />
             </div>
           </div>
           <div className="flex justify-end gap-3">
             <button
-              onClick={() => { setShowForm(false); setNewName(''); setNewCnpj('') }}
+              onClick={() => { setShowForm(false); resetForm() }}
               className="rounded-lg border px-4 py-2 text-sm text-fg-muted transition hover:bg-fg-ink-3"
             >
               Cancelar
             </button>
             <button
               onClick={handleCreate}
-              disabled={!newName.trim()}
+              disabled={!newName.trim() || !newCodEmpresa.trim()}
               className="rounded-lg bg-fg-brand px-4 py-2 text-sm font-medium text-white transition hover:bg-fg-brand-2 disabled:opacity-50"
             >
               Salvar
@@ -143,6 +156,11 @@ export function ClientsPage() {
                   <div>
                     <p className="font-medium text-fg-cream">{client.name}</p>
                     <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5">
+                      {client.cod_empresa && (
+                        <span className="rounded bg-fg-ink-3 px-1.5 py-0.5 font-mono text-xs text-fg-muted">
+                          Cód. {client.cod_empresa}
+                        </span>
+                      )}
                       {client.cnpj && (
                         <span className="text-xs text-fg-muted">{client.cnpj}</span>
                       )}

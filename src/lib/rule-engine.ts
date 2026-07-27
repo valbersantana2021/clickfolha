@@ -244,12 +244,19 @@ export function totalValue(rows: OutputRow[]): number {
   }, 0)
 }
 
-export function generateCsv(rows: OutputRow[]): string {
+// Header tag is "01TC" + the client's company code, zero-padded to 4 digits
+// (e.g. cod_empresa "6" -> "01TC0006"), matching the layout examples in arquivos/.
+function formatCodEmpresa(codEmpresa: string): string {
+  const digits = (codEmpresa ?? '').replace(/\D/g, '')
+  return digits ? digits.padStart(4, '0') : '0000'
+}
+
+export function generateCsv(rows: OutputRow[], codEmpresa: string): string {
   const total = totalValue(rows)
   const totalBR = total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
   const lines = [
-    '01TC0006,,,',
+    `01TC${formatCodEmpresa(codEmpresa)},,,`,
     'Cód.Empregado,Cód. Evento,Referência,Valor do Evento',
     ...rows.map(r =>
       [csvCell(r.employee_code), csvCell(r.event_code), csvCell(r.reference), csvCell(r.value)].join(','),
