@@ -44,15 +44,15 @@ const config: Config = {
         // FluxoGov "Ember" design system tokens, light mode (see .llm/clickfolha_background.png,
         // same amber/terracotta accents as the dark variant, background inverted to light)
         fg: {
-          ink: '#F7F3EC',
+          ink: '#D4FBE0',
           'ink-2': '#FFFFFF',
-          'ink-3': '#F0EAE0',
-          hairline: '#E1D6C4',
-          cream: '#1A140F',
-          muted: '#7A7264',
-          ice: '#B8792F',
-          brand: '#D97757',
-          'brand-2': '#C4623F',
+          'ink-3': '#9DF5BA',
+          hairline: '#9DF5BA',
+          cream: '#002B10',
+          muted: '#005E24',
+          ice: '#5CE88A',
+          brand: '#00CC52',
+          'brand-2': '#00943A',
         },
       },
       fontFamily: {

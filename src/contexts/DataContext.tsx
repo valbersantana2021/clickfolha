@@ -14,7 +14,7 @@ const persist = <T,>(key: string, data: T[]) =>
 
 interface DataContextValue {
   subTenants: SubTenant[]
-  createSubTenant: (name: string) => SubTenant
+  createSubTenant: (data: { name: string; cnpj?: string }) => SubTenant
   deleteSubTenant: (id: string) => void
 
   layouts: Layout[]
@@ -44,8 +44,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
   // ── Sub-tenants ───────────────────────────────────────────────────────────────
 
-  const createSubTenant = useCallback((name: string): SubTenant => {
-    const st: SubTenant = { id: crypto.randomUUID(), tenant_id: tid, name, created_at: new Date().toISOString() }
+  const createSubTenant = useCallback(({ name, cnpj }: { name: string; cnpj?: string }): SubTenant => {
+    const st: SubTenant = { id: crypto.randomUUID(), tenant_id: tid, name, cnpj, created_at: new Date().toISOString() }
     setSubTenants(prev => { const next = [...prev, st]; persist(key('sub_tenants'), next); return next })
     return st
   }, [tid]) // eslint-disable-line react-hooks/exhaustive-deps

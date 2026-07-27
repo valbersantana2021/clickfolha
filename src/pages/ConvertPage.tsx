@@ -9,7 +9,7 @@ import { AppLayout } from '@/components/AppLayout'
 import { useData } from '@/contexts/DataContext'
 import { useAuth } from '@/contexts/AuthContext'
 import {
-  parseExcel, autoDetect, processLayout, generateCsv, downloadCsv, totalValue,
+  parseExcel, autoDetect, processLayout, generateCsv, downloadCsv, buildCsvFileName, totalValue,
   type ParsedExcel, type OutputRow,
 } from '@/lib/rule-engine'
 import type { LayoutConfig, TransformType, Layout } from '@/types/database'
@@ -210,7 +210,7 @@ export function ConvertPage() {
   const handleCreateClient = () => {
     const name = newClientName.trim()
     if (!name) return
-    const st = createSubTenant(name)
+    const st = createSubTenant({ name })
     setClientId(st.id)
     setNewClientName('')
     setShowNewClient(false)
@@ -353,8 +353,7 @@ export function ConvertPage() {
   const handleDownload = () => {
     if (!file || !tenant) return
     const csv = generateCsv(outputRows)
-    const baseName = file.name.replace(/\.xlsx?$/i, '')
-    downloadCsv(csv, `${baseName}_folha.csv`)
+    downloadCsv(csv, buildCsvFileName(layoutName))
     logConversion({
       tenant_id: tenant.id,
       sub_tenant_id: clientId,

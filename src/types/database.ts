@@ -18,6 +18,7 @@ export interface SubTenant {
   id: string
   tenant_id: string
   name: string
+  cnpj?: string
   created_at: string
 }
 

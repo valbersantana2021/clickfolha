@@ -3,7 +3,7 @@ import { History, CheckCircle2, XCircle, Download, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { AppLayout } from '@/components/AppLayout'
 import { useData } from '@/contexts/DataContext'
-import { downloadCsv } from '@/lib/rule-engine'
+import { downloadCsv, buildCsvFileName } from '@/lib/rule-engine'
 import type { ConversionLog } from '@/types/database'
 
 export function HistoryPage() {
@@ -17,8 +17,7 @@ export function HistoryPage() {
 
   const handleRedownload = (log: ConversionLog) => {
     if (!log.csv_content) { toast.error('CSV não disponível para este registro.'); return }
-    const baseName = log.file_name.replace(/\.xlsx?$/i, '')
-    downloadCsv(log.csv_content, `${baseName}_folha.csv`)
+    downloadCsv(log.csv_content, buildCsvFileName(layoutName(log.layout_id), new Date(log.created_at)))
     toast.success('CSV baixado novamente.')
   }
 

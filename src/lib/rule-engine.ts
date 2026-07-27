@@ -1,4 +1,4 @@
-import * as XLSX from 'xlsx'
+﻿import * as XLSX from 'xlsx'
 import type { LayoutConfig, SheetRule, TransformType } from '@/types/database'
 
 // ── Types ───────────────────────────────────────────────────────────────────────
@@ -258,6 +258,19 @@ export function generateCsv(rows: OutputRow[]): string {
   ]
 
   return lines.join('\r\n')
+}
+
+export function buildCsvFileName(layoutName: string, date: Date = new Date()): string {
+  const safe = layoutName
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-zA-Z0-9]/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_|_$/, '')
+  const p = (n: number) => String(n).padStart(2, '0')
+  const dateStr = `${date.getFullYear()}${p(date.getMonth() + 1)}${p(date.getDate())}`
+  const timeStr = `${p(date.getHours())}${p(date.getMinutes())}`
+  return `${safe}_${dateStr}_${timeStr}.csv`
 }
 
 export function downloadCsv(content: string, filename: string): void {

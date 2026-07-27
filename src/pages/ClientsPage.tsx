@@ -1,13 +1,31 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Building2, Plus, Trash2, LayoutTemplate, ArrowRightLeft } from 'lucide-react'
+import { Building2, Plus, Trash2, LayoutTemplate, ArrowRightLeft, Calendar } from 'lucide-react'
 import { toast } from 'sonner'
 import { useData } from '@/contexts/DataContext'
 import { AppLayout } from '@/components/AppLayout'
 
+function formatCNPJ(value: string): string {
+  const d = value.replace(/\D/g, '').slice(0, 14)
+  return d
+    .replace(/^(\d{2})(\d)/, '$1.$2')
+    .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
+    .replace(/\.(\d{3})(\d)/, '.$1/$2')
+    .replace(/(\d{4})(\d)/, '$1-$2')
+}
+
+function formatDateTime(iso: string): string {
+  const d = new Date(iso)
+  return d.toLocaleString('pt-BR', {
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  })
+}
+
 export function ClientsPage() {
   const { subTenants, createSubTenant, deleteSubTenant, getLayoutsForClient } = useData()
   const [newName, setNewName] = useState('')
+  const [newCnpj, setNewCnpj] = useState('')
   const [showForm, setShowForm] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
 
@@ -16,8 +34,9 @@ export function ClientsPage() {
   const handleCreate = () => {
     const name = newName.trim()
     if (!name) return
-    createSubTenant(name)
+    createSubTenant({ name, cnpj: newCnpj.trim() || undefined })
     setNewName('')
+    setNewCnpj('')
     setShowForm(false)
     toast.success(`Cliente "${name}" criado.`)
   }
@@ -50,28 +69,43 @@ export function ClientsPage() {
       {/* Create form */}
       {showForm && (
         <div className="mb-6 rounded-xl border bg-white p-5 shadow-sm">
-          <p className="mb-3 text-sm font-medium text-fg-cream">Nome do cliente</p>
-          <div className="flex gap-3">
-            <input
-              autoFocus
-              value={newName}
-              onChange={e => setNewName(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') handleCreate(); if (e.key === 'Escape') setShowForm(false) }}
-              placeholder="Ex: Padaria São João Ltda"
-              className="flex-1 rounded-lg border border-fg-hairline px-3 py-2 text-sm focus:border-fg-brand focus:outline-none focus:ring-1 focus:ring-fg-brand"
-            />
+          <p className="mb-4 text-sm font-medium text-fg-cream">Novo cliente</p>
+          <div className="mb-3 grid grid-cols-2 gap-3">
+            <div>
+              <label className="mb-1 block text-xs font-medium text-fg-muted">Nome do cliente *</label>
+              <input
+                autoFocus
+                value={newName}
+                onChange={e => setNewName(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') handleCreate(); if (e.key === 'Escape') { setShowForm(false); setNewCnpj('') } }}
+                placeholder="Ex: Padaria São João Ltda"
+                className="w-full rounded-lg border border-fg-hairline px-3 py-2 text-sm focus:border-fg-brand focus:outline-none focus:ring-1 focus:ring-fg-brand"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-fg-muted">CNPJ</label>
+              <input
+                value={newCnpj}
+                onChange={e => setNewCnpj(formatCNPJ(e.target.value))}
+                onKeyDown={e => { if (e.key === 'Enter') handleCreate(); if (e.key === 'Escape') { setShowForm(false); setNewCnpj('') } }}
+                placeholder="00.000.000/0000-00"
+                className="w-full rounded-lg border border-fg-hairline px-3 py-2 text-sm focus:border-fg-brand focus:outline-none focus:ring-1 focus:ring-fg-brand"
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-3">
+            <button
+              onClick={() => { setShowForm(false); setNewName(''); setNewCnpj('') }}
+              className="rounded-lg border px-4 py-2 text-sm text-fg-muted transition hover:bg-fg-ink-3"
+            >
+              Cancelar
+            </button>
             <button
               onClick={handleCreate}
               disabled={!newName.trim()}
               className="rounded-lg bg-fg-brand px-4 py-2 text-sm font-medium text-white transition hover:bg-fg-brand-2 disabled:opacity-50"
             >
               Salvar
-            </button>
-            <button
-              onClick={() => { setShowForm(false); setNewName('') }}
-              className="rounded-lg border px-4 py-2 text-sm text-fg-muted transition hover:bg-fg-ink-3"
-            >
-              Cancelar
             </button>
           </div>
         </div>
@@ -103,14 +137,23 @@ export function ClientsPage() {
             return (
               <div key={client.id} className="flex items-center justify-between rounded-xl border bg-white px-5 py-4 shadow-sm">
                 <div className="flex items-center gap-4">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-fg-ink-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-fg-ink-3">
                     <Building2 className="h-5 w-5 text-fg-muted" />
                   </div>
                   <div>
                     <p className="font-medium text-fg-cream">{client.name}</p>
-                    <p className="text-xs text-fg-muted">
-                      {clientLayouts.length} layout{clientLayouts.length !== 1 ? 's' : ''} configurado{clientLayouts.length !== 1 ? 's' : ''}
-                    </p>
+                    <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5">
+                      {client.cnpj && (
+                        <span className="text-xs text-fg-muted">{client.cnpj}</span>
+                      )}
+                      <span className="flex items-center gap-1 text-xs text-fg-muted">
+                        <Calendar className="h-3 w-3" />
+                        {formatDateTime(client.created_at)}
+                      </span>
+                      <span className="text-xs text-fg-muted">
+                        {clientLayouts.length} layout{clientLayouts.length !== 1 ? 's' : ''}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
