@@ -1,14 +1,18 @@
 {
+  "env": {
+    "ECC_DISABLED_HOOKS": "pre:edit-write:gateguard-fact-force,pre:bash:gateguard-fact-force"
+  },
   "permissions": {
     "allow": [
       "PowerShell(*)",
       "Bash(*)",
       "Write(*)",
-      "Edit(*)"
+      "Edit(*)",
+      "Bash(npm install *)",
+      "Read(//c/Users/valbe/.claude/plugins/cache/superpowers-marketplace/superpowers/6.2.0/skills/subagent-driven-development/**)",
+      "Read(//c/Users/valbe/**)",
+      "mcp__plugin_ecc_chrome-devtools__list_pages"
     ],
     "deny": []
-  },
-  "env": {
-    "ECC_DISABLED_HOOKS": "pre:edit-write:gateguard-fact-force,pre:bash:gateguard-fact-force"
   }
 }
