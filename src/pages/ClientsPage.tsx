@@ -4,15 +4,7 @@ import { Building2, Plus, Trash2, LayoutTemplate, ArrowRightLeft, Calendar } fro
 import { toast } from 'sonner'
 import { useData } from '@/contexts/DataContext'
 import { AppLayout } from '@/components/AppLayout'
-
-function formatCNPJ(value: string): string {
-  const d = value.replace(/\D/g, '').slice(0, 14)
-  return d
-    .replace(/^(\d{2})(\d)/, '$1.$2')
-    .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
-    .replace(/\.(\d{3})(\d)/, '.$1/$2')
-    .replace(/(\d{4})(\d)/, '$1-$2')
-}
+import { formatCNPJ } from '@/lib/utils'
 
 function formatDateTime(iso: string): string {
   const d = new Date(iso)
@@ -32,23 +24,35 @@ export function ClientsPage() {
 
   useEffect(() => { document.title = 'Clientes | ClickFolha' }, [])
 
+  const [saving, setSaving] = useState(false)
+
   const resetForm = () => { setNewName(''); setNewCnpj(''); setNewCodEmpresa('') }
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     const name = newName.trim()
     const codEmpresa = newCodEmpresa.trim()
     if (!name || !codEmpresa) return
-    createSubTenant({ name, cod_empresa: codEmpresa, cnpj: newCnpj.trim() || undefined })
-    resetForm()
-    setShowForm(false)
-    toast.success(`Cliente "${name}" criado.`)
+    setSaving(true)
+    try {
+      await createSubTenant({ name, cod_empresa: codEmpresa, cnpj: newCnpj.trim() || undefined })
+      resetForm()
+      setShowForm(false)
+      toast.success(`Cliente "${name}" criado.`)
+    } catch {
+      toast.error('Erro ao criar cliente. Tente novamente.')
+    }
+    setSaving(false)
   }
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     const client = subTenants.find(s => s.id === id)
-    deleteSubTenant(id)
+    try {
+      await deleteSubTenant(id)
+      toast.success(`"${client?.name}" removido.`)
+    } catch {
+      toast.error('Não é possível excluir um cliente que já tem layouts ou conversões registradas.')
+    }
     setConfirmDelete(null)
-    toast.success(`"${client?.name}" removido.`)
   }
 
   return (
@@ -115,10 +119,10 @@ export function ClientsPage() {
             </button>
             <button
               onClick={handleCreate}
-              disabled={!newName.trim() || !newCodEmpresa.trim()}
+              disabled={!newName.trim() || !newCodEmpresa.trim() || saving}
               className="rounded-lg bg-fg-brand px-4 py-2 text-sm font-medium text-white transition hover:bg-fg-brand-2 disabled:opacity-50"
             >
-              Salvar
+              {saving ? 'Salvando...' : 'Salvar'}
             </button>
           </div>
         </div>

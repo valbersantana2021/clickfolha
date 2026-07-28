@@ -23,7 +23,7 @@ const StatCard = memo(function StatCard({ label, value, hint }: StatCardProps) {
 
 export function DashboardPage() {
   const { tenant, profile } = useAuth()
-  const { subTenants, layouts, conversionLogs } = useData()
+  const { subTenants, layouts, conversionLogs, conversionLimit } = useData()
   const navigate = useNavigate()
 
   useEffect(() => { document.title = 'Dashboard | ClickFolha' }, [])
@@ -57,7 +57,7 @@ export function DashboardPage() {
         <StatCard
           label="Conversões este mês"
           value={monthConversions.length}
-          hint={`Limite: 50 / mês (Starter)`}
+          hint={conversionLimit !== null ? `Limite: ${conversionLimit} / mês (${tenant?.plan_id})` : 'Sem limite configurado'}
         />
         <StatCard
           label="Valor processado (mês)"
@@ -148,7 +148,7 @@ export function DashboardPage() {
           <CreditCard className="h-5 w-5 text-fg-muted" />
           <div>
             <p className="text-sm font-medium text-fg-cream">Plano Starter</p>
-            <p className="text-xs text-fg-muted">50 conversões/mês · 1 operador · 5 layouts</p>
+            <p className="text-xs text-fg-muted">{conversionLimit ?? '—'} conversões/mês · 1 operador · 5 layouts</p>
           </div>
         </div>
         <button disabled className="rounded-lg border border-fg-hairline px-3 py-1.5 text-xs font-medium text-fg-muted cursor-not-allowed">

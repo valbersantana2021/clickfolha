@@ -3,10 +3,10 @@ import { useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import {
   Upload, CheckCircle2, Download, RefreshCw, ChevronRight,
-  Loader2, Plus, FileSpreadsheet, Table, X,
+  Loader2, Plus, FileSpreadsheet, Table, X, AlertTriangle,
 } from 'lucide-react'
 import { AppLayout } from '@/components/AppLayout'
-import { useData } from '@/contexts/DataContext'
+import { useData, MonthlyLimitReachedError, TenantInactiveError } from '@/contexts/DataContext'
 import { useAuth } from '@/contexts/AuthContext'
 import {
   parseExcel, autoDetect, processLayout, generateCsv, downloadCsv, buildCsvFileName, totalValue,
@@ -103,7 +103,13 @@ function StepBar({ current }: { current: Step }) {
 export function ConvertPage() {
   const [searchParams] = useSearchParams()
   const { tenant } = useAuth()
-  const { subTenants, createSubTenant, getLayoutsForClient, saveLayout, logConversion } = useData()
+  const { subTenants, createSubTenant, getLayoutsForClient, saveLayout, logConversion, conversionLogs, conversionLimit } = useData()
+
+  const thisMonth = new Date().toISOString().slice(0, 7)
+  const monthConversionsCount = conversionLogs.filter(l => l.created_at.startsWith(thisMonth)).length
+  const limitReached = conversionLimit !== null && monthConversionsCount >= conversionLimit
+  const tenantInactive = tenant?.active === false
+  const blocked = tenantInactive || limitReached
 
   const [step, setStep] = useState<Step>('setup')
 
@@ -208,16 +214,20 @@ export function ConvertPage() {
 
   // ── Create client ─────────────────────────────────────────────────────────────
 
-  const handleCreateClient = () => {
+  const handleCreateClient = async () => {
     const name = newClientName.trim()
     const codEmpresa = newClientCodEmpresa.trim()
     if (!name || !codEmpresa) return
-    const st = createSubTenant({ name, cod_empresa: codEmpresa })
-    setClientId(st.id)
-    setNewClientName('')
-    setNewClientCodEmpresa('')
-    setShowNewClient(false)
-    toast.success(`Cliente "${name}" criado.`)
+    try {
+      const st = await createSubTenant({ name, cod_empresa: codEmpresa })
+      setClientId(st.id)
+      setNewClientName('')
+      setNewClientCodEmpresa('')
+      setShowNewClient(false)
+      toast.success(`Cliente "${name}" criado.`)
+    } catch {
+      toast.error('Erro ao criar cliente. Tente novamente.')
+    }
   }
 
   // ── Step 1 → Step 2 ──────────────────────────────────────────────────────────
@@ -328,14 +338,21 @@ export function ConvertPage() {
 
     const config = buildConfig(sheetRules)
 
+    setProcessing(true)
+
     let lid = savedLayoutId || selectedLayoutId
     if (!lid) {
-      const layout = saveLayout({ sub_tenant_id: clientId, name: layoutName, config_json: config })
-      lid = layout.id
-      setSavedLayoutId(lid)
+      try {
+        const layout = await saveLayout({ sub_tenant_id: clientId, name: layoutName, config_json: config })
+        lid = layout.id
+        setSavedLayoutId(lid)
+      } catch {
+        toast.error('Erro ao salvar o layout. Tente novamente.')
+        setProcessing(false)
+        return
+      }
     }
 
-    setProcessing(true)
     try {
       const rows = await processLayout(file, config)
       if (rows.length === 0) {
@@ -353,22 +370,32 @@ export function ConvertPage() {
 
   // ── Download ─────────────────────────────────────────────────────────────────
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     if (!file || !tenant) return
     const codEmpresa = subTenants.find(s => s.id === clientId)?.cod_empresa ?? ''
     const csv = generateCsv(outputRows, codEmpresa)
     downloadCsv(csv, buildCsvFileName(layoutName))
-    logConversion({
-      tenant_id: tenant.id,
-      sub_tenant_id: clientId,
-      layout_id: savedLayoutId || selectedLayoutId,
-      file_name: file.name,
-      records_count: outputRows.length,
-      total_value: totalValue(outputRows),
-      status: 'success',
-      csv_content: csv,
-    })
-    toast.success('CSV baixado e conversão registrada.')
+    try {
+      await logConversion({
+        tenant_id: tenant.id,
+        sub_tenant_id: clientId,
+        layout_id: savedLayoutId || selectedLayoutId,
+        file_name: file.name,
+        records_count: outputRows.length,
+        total_value: totalValue(outputRows),
+        status: 'success',
+        csv_content: csv,
+      })
+      toast.success('CSV baixado e conversão registrada.')
+    } catch (err) {
+      if (err instanceof MonthlyLimitReachedError) {
+        toast.error('CSV baixado, mas o limite mensal de conversões do seu plano foi atingido — a conversão não foi registrada.')
+      } else if (err instanceof TenantInactiveError) {
+        toast.error('CSV baixado, mas sua empresa está inativa — a conversão não foi registrada.')
+      } else {
+        toast.error('CSV baixado, mas houve um erro ao registrar a conversão no histórico.')
+      }
+    }
   }
 
   // ── Reset ────────────────────────────────────────────────────────────────────
@@ -400,8 +427,34 @@ export function ConvertPage() {
     <AppLayout>
       <StepBar current={step} />
 
+      {tenantInactive && (
+        <div className="mb-6 flex items-start gap-3 rounded-xl border border-red-300 bg-red-50 p-5">
+          <AlertTriangle className="h-5 w-5 shrink-0 text-red-600" />
+          <div>
+            <p className="font-medium text-red-900">Empresa inativa</p>
+            <p className="mt-1 text-sm text-red-800">
+              Sua conta está temporariamente inativa (ex.: pendência de pagamento). Novas
+              conversões estão bloqueadas até a regularização — entre em contato com o suporte.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {!tenantInactive && limitReached && (
+        <div className="mb-6 flex items-start gap-3 rounded-xl border border-amber-300 bg-amber-50 p-5">
+          <AlertTriangle className="h-5 w-5 shrink-0 text-amber-600" />
+          <div>
+            <p className="font-medium text-amber-900">Limite mensal de conversões atingido</p>
+            <p className="mt-1 text-sm text-amber-800">
+              Seu plano permite {conversionLimit} conversões por mês e esse limite já foi atingido.
+              Novas conversões poderão ser processadas a partir do próximo mês.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* ── STEP 1: SETUP ──────────────────────────────────────────────────────── */}
-      {step === 'setup' && (
+      {step === 'setup' && !blocked && (
         <div className="grid gap-6 lg:grid-cols-2">
 
           {/* Client selection */}

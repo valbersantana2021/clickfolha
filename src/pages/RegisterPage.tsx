@@ -9,10 +9,13 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useToggle } from '@/hooks/useToggle'
 import { AuthShell } from '@/components/AuthShell'
 import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form'
+import { formatCNPJ } from '@/lib/utils'
 
 const schema = z.object({
   full_name: z.string().min(1, 'Nome obrigatorio').max(100),
   organization_name: z.string().min(1, 'Nome da empresa obrigatorio').max(100),
+  razao_social: z.string().min(1, 'Razao social obrigatoria').max(100),
+  cnpj: z.string().refine(v => v.replace(/\D/g, '').length === 14, 'CNPJ invalido'),
   email: z.string().email('E-mail invalido'),
   password: z.string().min(8, 'Minimo 8 caracteres'),
 })
@@ -82,6 +85,39 @@ export function RegisterPage() {
                 <label className="font-mono text-xs font-medium uppercase tracking-widest text-fg-muted">Empresa</label>
                 <FormControl>
                   <input placeholder="Contabilidade Exemplo Ltda" className={`mt-1.5 ${input}`} {...field} />
+                </FormControl>
+                <FormMessage className="text-xs text-red-600" />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="razao_social"
+            render={({ field }) => (
+              <FormItem>
+                <label className="font-mono text-xs font-medium uppercase tracking-widest text-fg-muted">Razão Social</label>
+                <FormControl>
+                  <input placeholder="Contabilidade Exemplo Ltda ME" className={`mt-1.5 ${input}`} {...field} />
+                </FormControl>
+                <FormMessage className="text-xs text-red-600" />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="cnpj"
+            render={({ field }) => (
+              <FormItem>
+                <label className="font-mono text-xs font-medium uppercase tracking-widest text-fg-muted">CNPJ</label>
+                <FormControl>
+                  <input
+                    placeholder="00.000.000/0000-00"
+                    className={`mt-1.5 ${input}`}
+                    {...field}
+                    onChange={e => field.onChange(formatCNPJ(e.target.value))}
+                  />
                 </FormControl>
                 <FormMessage className="text-xs text-red-600" />
               </FormItem>

@@ -1,6 +1,6 @@
 import { useCallback } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
-import { FileSpreadsheet, LogOut, History, Users, LayoutDashboard, ArrowRightLeft } from 'lucide-react'
+import { FileSpreadsheet, LogOut, History, Users, LayoutDashboard, ArrowRightLeft, ShieldCheck } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 
 interface AppLayoutProps {
@@ -15,7 +15,7 @@ const navItems = [
 ]
 
 export function AppLayout({ children }: AppLayoutProps) {
-  const { profile, signOut } = useAuth()
+  const { profile, isPlatformAdmin, signOut } = useAuth()
   const navigate = useNavigate()
 
   const handleSignOut = useCallback(async () => {
@@ -54,6 +54,21 @@ export function AppLayout({ children }: AppLayoutProps) {
                   {label}
                 </NavLink>
               ))}
+              {isPlatformAdmin && (
+                <NavLink
+                  to="/admin"
+                  className={({ isActive }) =>
+                    `flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                      isActive
+                        ? 'bg-fg-ink-3 text-fg-cream'
+                        : 'text-fg-muted hover:bg-fg-ink-3 hover:text-fg-cream'
+                    }`
+                  }
+                >
+                  <ShieldCheck className="h-3.5 w-3.5" />
+                  Admin
+                </NavLink>
+              )}
             </nav>
           </div>
 

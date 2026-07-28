@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { History, CheckCircle2, XCircle, Download, Trash2 } from 'lucide-react'
+import { useEffect } from 'react'
+import { History, CheckCircle2, XCircle, Download } from 'lucide-react'
 import { toast } from 'sonner'
 import { AppLayout } from '@/components/AppLayout'
 import { useData } from '@/contexts/DataContext'
@@ -7,8 +7,7 @@ import { downloadCsv, buildCsvFileName } from '@/lib/rule-engine'
 import type { ConversionLog } from '@/types/database'
 
 export function HistoryPage() {
-  const { conversionLogs, subTenants, layouts, deleteConversion } = useData()
-  const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
+  const { conversionLogs, subTenants, layouts } = useData()
 
   useEffect(() => { document.title = 'Histórico | ClickFolha' }, [])
 
@@ -16,15 +15,9 @@ export function HistoryPage() {
   const layoutName = (id: string) => layouts.find(l => l.id === id)?.name ?? '—'
 
   const handleRedownload = (log: ConversionLog) => {
-    if (!log.csv_content) { toast.error('CSV não disponível para este registro.'); return }
+    if (!log.csv_content) { toast.error('CSV não disponível para este registro (baixado em outro dispositivo ou sessão).'); return }
     downloadCsv(log.csv_content, buildCsvFileName(layoutName(log.layout_id), new Date(log.created_at)))
     toast.success('CSV baixado novamente.')
-  }
-
-  const handleDelete = (id: string) => {
-    deleteConversion(id)
-    setConfirmDelete(null)
-    toast.success('Conversão removida do histórico.')
   }
 
   return (
@@ -57,7 +50,7 @@ export function HistoryPage() {
                   <th className="px-4 py-3 text-right">Registros</th>
                   <th className="px-4 py-3 text-right">Valor Total</th>
                   <th className="px-4 py-3 text-center">Status</th>
-                  <th className="px-4 py-3 text-center">Ações</th>
+                  <th className="px-4 py-3 text-center">CSV</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
@@ -89,42 +82,15 @@ export function HistoryPage() {
                         </span>
                       )}
                     </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center justify-center gap-1">
-                        <button
-                          onClick={() => handleRedownload(log)}
-                          disabled={!log.csv_content}
-                          title="Baixar CSV novamente"
-                          className="rounded p-1.5 text-fg-muted transition hover:bg-fg-brand/10 hover:text-fg-ice disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
-                        >
-                          <Download className="h-4 w-4" />
-                        </button>
-
-                        {confirmDelete === log.id ? (
-                          <div className="flex items-center gap-1">
-                            <button
-                              onClick={() => handleDelete(log.id)}
-                              className="rounded-lg bg-red-500 px-2 py-1 text-xs font-medium text-white transition hover:bg-red-600"
-                            >
-                              Confirmar
-                            </button>
-                            <button
-                              onClick={() => setConfirmDelete(null)}
-                              className="rounded-lg border px-2 py-1 text-xs text-fg-muted transition hover:bg-fg-ink-3"
-                            >
-                              Cancelar
-                            </button>
-                          </div>
-                        ) : (
-                          <button
-                            onClick={() => setConfirmDelete(log.id)}
-                            title="Excluir conversão"
-                            className="rounded p-1.5 text-fg-muted transition hover:bg-red-50 hover:text-red-500"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        )}
-                      </div>
+                    <td className="px-4 py-3 text-center">
+                      <button
+                        onClick={() => handleRedownload(log)}
+                        disabled={!log.csv_content}
+                        title="Baixar CSV novamente"
+                        className="rounded p-1.5 text-fg-muted transition hover:bg-fg-brand/10 hover:text-fg-ice disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
+                      >
+                        <Download className="h-4 w-4" />
+                      </button>
                     </td>
                   </tr>
                 ))}

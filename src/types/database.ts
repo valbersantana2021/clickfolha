@@ -1,8 +1,12 @@
 export interface Tenant {
   id: string
+  code: number
   name: string
+  cnpj: string
+  razao_social: string
   plan_id: string
   stripe_customer_id: string | null
+  active: boolean
   created_at: string
 }
 

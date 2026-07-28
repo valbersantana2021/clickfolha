@@ -12,6 +12,7 @@ import { DashboardPage } from '@/pages/DashboardPage'
 import { ClientsPage } from '@/pages/ClientsPage'
 import { ConvertPage } from '@/pages/ConvertPage'
 import { HistoryPage } from '@/pages/HistoryPage'
+import { PlatformAdminPage } from '@/pages/PlatformAdminPage'
 
 function ProtectedApp({ children }: { children: React.ReactNode }) {
   return (
@@ -39,6 +40,7 @@ export default function App() {
             <Route path="/clients" element={<ProtectedApp><ClientsPage /></ProtectedApp>} />
             <Route path="/convert" element={<ProtectedApp><ConvertPage /></ProtectedApp>} />
             <Route path="/history" element={<ProtectedApp><HistoryPage /></ProtectedApp>} />
+            <Route path="/admin" element={<ProtectedApp><PlatformAdminPage /></ProtectedApp>} />
 
             {/* Fallback */}
             <Route path="*" element={<Navigate to="/login" replace />} />

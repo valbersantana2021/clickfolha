@@ -1,175 +1,128 @@
-﻿import React, { createContext, useContext, useEffect, useState, useCallback } from 'react'
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react'
+import type { User } from '@supabase/supabase-js'
+import { supabase } from '@/lib/supabase'
+import { APP_URL } from '@/env'
 import type { Tenant, Profile } from '@/types/database'
 
 // ---------------------------------------------------------------------------
-// Types
+// Context
 // ---------------------------------------------------------------------------
-interface MockUser {
-  id: string
-  email: string
-}
-
 interface AuthContextValue {
-  user: MockUser | null
+  user: User | null
   profile: Profile | null
   tenant: Tenant | null
+  isPlatformAdmin: boolean
   loading: boolean
-  signUp: (params: { email: string; password: string; full_name: string; organization_name: string }) => Promise<{ error: string | null }>
+  signUp: (params: { email: string; password: string; full_name: string; organization_name: string; cnpj: string; razao_social: string }) => Promise<{ error: string | null }>
   signIn: (params: { email: string; password: string }) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
   resetPasswordForEmail: (email: string) => Promise<void>
   updatePassword: (password: string) => Promise<{ error: string | null }>
 }
 
-// ---------------------------------------------------------------------------
-// Mock storage helpers
-// ---------------------------------------------------------------------------
-const USERS_KEY = 'cf_mock_users'
-const SESSION_KEY = 'cf_mock_session'
-
-interface StoredUser {
-  id: string
-  email: string
-  password: string
-  full_name: string
-  organization_name: string
-}
-
-const getUsers = (): Record<string, StoredUser> => {
-  try { return JSON.parse(localStorage.getItem(USERS_KEY) ?? '{}') } catch { return {} }
-}
-
-const saveUsers = (users: Record<string, StoredUser>) =>
-  localStorage.setItem(USERS_KEY, JSON.stringify(users))
-
-const getSession = (): StoredUser | null => {
-  try { return JSON.parse(localStorage.getItem(SESSION_KEY) ?? 'null') } catch { return null }
-}
-
-const saveSession = (user: StoredUser | null) =>
-  user
-    ? localStorage.setItem(SESSION_KEY, JSON.stringify(user))
-    : localStorage.removeItem(SESSION_KEY)
-
-const toProfile = (u: StoredUser): Profile => ({
-  id: u.id,
-  tenant_id: `tenant-${u.id}`,
-  full_name: u.full_name,
-  role: 'admin',
-  created_at: new Date().toISOString(),
-})
-
-const toTenant = (u: StoredUser): Tenant => ({
-  id: `tenant-${u.id}`,
-  name: u.organization_name,
-  plan_id: 'starter',
-  stripe_customer_id: null,
-  created_at: new Date().toISOString(),
-})
-
-// ---------------------------------------------------------------------------
-// Context
-// ---------------------------------------------------------------------------
 const AuthContext = createContext<AuthContextValue | null>(null)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<MockUser | null>(null)
+  const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [tenant, setTenant] = useState<Tenant | null>(null)
+  const [isPlatformAdmin, setIsPlatformAdmin] = useState(false)
   const [loading, setLoading] = useState(true)
 
-  const applySession = useCallback((stored: StoredUser | null) => {
-    if (stored) {
-      setUser({ id: stored.id, email: stored.email })
-      setProfile(toProfile(stored))
-      setTenant(toTenant(stored))
-    } else {
-      setUser(null)
+  const loadProfileAndTenant = useCallback(async (userId: string) => {
+    const { data: profileData } = await supabase
+      .from('cf_profiles')
+      .select('*')
+      .eq('id', userId)
+      .single()
+
+    if (!profileData) {
+      // Session references a user with no profile row (e.g. deleted directly
+      // in the database) — the JWT is still technically valid until it
+      // expires, so without this the app would show a broken logged-in
+      // state instead of returning to /login.
       setProfile(null)
       setTenant(null)
+      setIsPlatformAdmin(false)
+      await supabase.auth.signOut()
+      return
     }
+    setProfile(profileData)
+
+    const [{ data: tenantData }, { data: adminRow }] = await Promise.all([
+      supabase.from('cf_tenants').select('*').eq('id', profileData.tenant_id).single(),
+      supabase.from('cf_platform_admins').select('user_id').eq('user_id', userId).maybeSingle(),
+    ])
+    setTenant(tenantData ?? null)
+    setIsPlatformAdmin(!!adminRow)
   }, [])
 
-  // Seed default account on first load
   useEffect(() => {
-    const users = getUsers()
-    const DEFAULT_EMAIL = 'admin@clickfolha.com.br'
-    if (!users[DEFAULT_EMAIL]) {
-      const seed: StoredUser = {
-        id: 'seed-admin-001',
-        email: DEFAULT_EMAIL,
-        password: 'clickfolha123',
-        full_name: 'Administrador',
-        organization_name: 'ClickFolha Demo',
+    let cancelled = false
+
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (cancelled) return
+      setUser(session?.user ?? null)
+      if (session?.user) await loadProfileAndTenant(session.user.id)
+      setLoading(false)
+    })
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      setUser(session?.user ?? null)
+      if (session?.user) {
+        await loadProfileAndTenant(session.user.id)
+      } else {
+        setProfile(null)
+        setTenant(null)
+        setIsPlatformAdmin(false)
       }
-      users[DEFAULT_EMAIL] = seed
-      saveUsers(users)
-    }
-  }, [])
+    })
 
-  // Restore session on mount
-  useEffect(() => {
-    applySession(getSession())
-    setLoading(false)
-  }, [applySession])
+    return () => {
+      cancelled = true
+      subscription.unsubscribe()
+    }
+  }, [loadProfileAndTenant])
 
   const signUp = useCallback(
-    async ({ email, password, full_name, organization_name }: { email: string; password: string; full_name: string; organization_name: string }) => {
-      const users = getUsers()
-      if (users[email]) return { error: 'User already registered' }
-      const newUser: StoredUser = {
-        id: crypto.randomUUID(),
+    async ({ email, password, full_name, organization_name, cnpj, razao_social }: { email: string; password: string; full_name: string; organization_name: string; cnpj: string; razao_social: string }) => {
+      const { error } = await supabase.auth.signUp({
         email,
         password,
-        full_name,
-        organization_name,
-      }
-      users[email] = newUser
-      saveUsers(users)
-      saveSession(newUser)
-      applySession(newUser)
-      return { error: null }
-    },
-    [applySession],
-  )
-
-  const signIn = useCallback(
-    async ({ email, password }: { email: string; password: string }) => {
-      const users = getUsers()
-      const found = users[email]
-      if (!found || found.password !== password) return { error: 'Invalid login credentials' }
-      saveSession(found)
-      applySession(found)
-      return { error: null }
-    },
-    [applySession],
-  )
-
-  const signOut = useCallback(async () => {
-    saveSession(null)
-    applySession(null)
-  }, [applySession])
-
-  const resetPasswordForEmail = useCallback(async (_email: string) => {
-    // Mock: always succeeds silently (no real email sent)
-  }, [])
-
-  const updatePassword = useCallback(
-    async (password: string) => {
-      const stored = getSession()
-      if (!stored) return { error: 'No active session' }
-      const users = getUsers()
-      users[stored.email] = { ...stored, password }
-      saveUsers(users)
-      saveSession(users[stored.email])
+        options: { data: { full_name, organization_name, cnpj, razao_social } },
+      })
+      if (error) return { error: error.message }
       return { error: null }
     },
     [],
   )
 
+  const signIn = useCallback(
+    async ({ email, password }: { email: string; password: string }) => {
+      const { error } = await supabase.auth.signInWithPassword({ email, password })
+      if (error) return { error: error.message }
+      return { error: null }
+    },
+    [],
+  )
+
+  const signOut = useCallback(async () => {
+    await supabase.auth.signOut()
+  }, [])
+
+  const resetPasswordForEmail = useCallback(async (email: string) => {
+    await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${APP_URL}/reset-password` })
+  }, [])
+
+  const updatePassword = useCallback(async (password: string) => {
+    const { error } = await supabase.auth.updateUser({ password })
+    if (error) return { error: error.message }
+    return { error: null }
+  }, [])
+
   return (
     <AuthContext.Provider
-      value={{ user, profile, tenant, loading, signUp, signIn, signOut, resetPasswordForEmail, updatePassword }}
+      value={{ user, profile, tenant, isPlatformAdmin, loading, signUp, signIn, signOut, resetPasswordForEmail, updatePassword }}
     >
       {children}
     </AuthContext.Provider>
