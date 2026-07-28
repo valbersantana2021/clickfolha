@@ -13,7 +13,6 @@ interface AuthContextValue {
   tenant: Tenant | null
   isPlatformAdmin: boolean
   loading: boolean
-  signUp: (params: { email: string; password: string; full_name: string; organization_name: string; cnpj: string; razao_social: string }) => Promise<{ error: string | null }>
   signIn: (params: { email: string; password: string }) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
   resetPasswordForEmail: (email: string) => Promise<void>
@@ -41,6 +40,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // in the database) — the JWT is still technically valid until it
       // expires, so without this the app would show a broken logged-in
       // state instead of returning to /login.
+      setProfile(null)
+      setTenant(null)
+      setIsPlatformAdmin(false)
+      await supabase.auth.signOut()
+      return
+    }
+    if (!profileData.active) {
+      // A tenant admin deactivated this user (see EquipePage) — an existing
+      // session must stop working on its next load, not just new logins.
       setProfile(null)
       setTenant(null)
       setIsPlatformAdmin(false)
@@ -84,19 +92,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [loadProfileAndTenant])
 
-  const signUp = useCallback(
-    async ({ email, password, full_name, organization_name, cnpj, razao_social }: { email: string; password: string; full_name: string; organization_name: string; cnpj: string; razao_social: string }) => {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { data: { full_name, organization_name, cnpj, razao_social } },
-      })
-      if (error) return { error: error.message }
-      return { error: null }
-    },
-    [],
-  )
-
   const signIn = useCallback(
     async ({ email, password }: { email: string; password: string }) => {
       const { error } = await supabase.auth.signInWithPassword({ email, password })
@@ -122,7 +117,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, profile, tenant, isPlatformAdmin, loading, signUp, signIn, signOut, resetPasswordForEmail, updatePassword }}
+      value={{ user, profile, tenant, isPlatformAdmin, loading, signIn, signOut, resetPasswordForEmail, updatePassword }}
     >
       {children}
     </AuthContext.Provider>
