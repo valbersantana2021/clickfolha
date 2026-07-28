@@ -131,13 +131,6 @@ export function LoginPage() {
         </form>
       </Form>
 
-      <p className="mt-6 text-center text-sm text-fg-muted">
-        Nao tem conta?{' '}
-        <Link to="/register" className="font-semibold text-fg-ice transition hover:text-fg-cream">
-          Criar conta
-        </Link>
-      </p>
-
       <div className="mt-8 flex items-center justify-center gap-2 text-xs text-fg-muted">
         <Shield className="h-3.5 w-3.5" />
         <span>Conexão segura · HTTPS</span>

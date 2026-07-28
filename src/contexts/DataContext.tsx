@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react'
-import type { SubTenant, Layout, LayoutConfig, ConversionLog } from '@/types/database'
+import type { SubTenant, Layout, LayoutConfig, ConversionLog, Profile } from '@/types/database'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
+import { inviteUser } from '@/lib/invite'
 
 // ── CSV local cache ─────────────────────────────────────────────────────────────
 // Excel/CSV content must never leave the browser (LGPD guarantee, see
@@ -45,6 +46,10 @@ interface DataContextValue {
   updateSubTenant: (id: string, data: { name: string; cod_empresa: string; cnpj?: string }) => Promise<void>
   deleteSubTenant: (id: string) => Promise<void>
 
+  teamMembers: Profile[]
+  inviteTeamMember: (data: { full_name: string; email: string; role: 'admin' | 'operator' }) => Promise<void>
+  updateTeamMemberActive: (id: string, active: boolean) => Promise<void>
+
   layouts: Layout[]
   getLayoutsForClient: (subTenantId: string) => Layout[]
   saveLayout: (data: { sub_tenant_id: string; name: string; config_json: LayoutConfig }) => Promise<Layout>
@@ -78,6 +83,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [subTenants, setSubTenants] = useState<SubTenant[]>([])
   const [layouts, setLayouts] = useState<Layout[]>([])
   const [conversionLogs, setConversionLogs] = useState<ConversionLog[]>([])
+  const [teamMembers, setTeamMembers] = useState<Profile[]>([])
 
   useEffect(() => {
     if (!tenant) {
@@ -85,6 +91,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       setSubTenants([])
       setLayouts([])
       setConversionLogs([])
+      setTeamMembers([])
       setLoading(false)
       return
     }
@@ -93,17 +100,19 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     setLoading(true)
 
     void (async () => {
-      const [{ data: st }, { data: lay }, { data: logs }, { data: limitRow }] = await Promise.all([
+      const [{ data: st }, { data: lay }, { data: logs }, { data: limitRow }, { data: team }] = await Promise.all([
         supabase.from('cf_sub_tenants').select('*').eq('tenant_id', tenant.id).order('created_at', { ascending: false }),
         supabase.from('cf_layouts').select('*'),
         supabase.from('cf_conversions_log').select('*').eq('tenant_id', tenant.id).order('created_at', { ascending: false }),
         supabase.from('cf_plan_limits').select('monthly_conversions').eq('plan_id', tenant.plan_id).maybeSingle(),
+        supabase.from('cf_profiles').select('*').eq('tenant_id', tenant.id).order('created_at', { ascending: true }),
       ])
       if (cancelled) return
       setSubTenants(st ?? [])
       setLayouts(lay ?? [])
       setConversionLogs((logs ?? []).map(l => ({ ...l, csv_content: readCachedCsv(l.id) })))
       setConversionLimit(limitRow?.monthly_conversions ?? null)
+      setTeamMembers(team ?? [])
       setLoading(false)
     })()
 
@@ -139,6 +148,34 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     const { error } = await supabase.from('cf_sub_tenants').delete().eq('id', id)
     if (error) throw error
     setSubTenants(prev => prev.filter(s => s.id !== id))
+  }, [])
+
+  // ── Team members ─────────────────────────────────────────────────────────────
+
+  const refreshTeamMembers = useCallback(async () => {
+    if (!tenant) return
+    const { data } = await supabase
+      .from('cf_profiles')
+      .select('*')
+      .eq('tenant_id', tenant.id)
+      .order('created_at', { ascending: true })
+    setTeamMembers(data ?? [])
+  }, [tenant])
+
+  const inviteTeamMember = useCallback(async ({ full_name, email, role }: { full_name: string; email: string; role: 'admin' | 'operator' }) => {
+    await inviteUser({ full_name, email, role })
+    await refreshTeamMembers()
+  }, [refreshTeamMembers])
+
+  const updateTeamMemberActive = useCallback(async (id: string, active: boolean) => {
+    const { data, error } = await supabase
+      .from('cf_profiles')
+      .update({ active })
+      .eq('id', id)
+      .select()
+      .single()
+    if (error) throw error
+    setTeamMembers(prev => prev.map(m => m.id === id ? data : m))
   }, [])
 
   // ── Layouts ───────────────────────────────────────────────────────────────────
@@ -210,6 +247,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       loading,
       conversionLimit,
       subTenants, createSubTenant, updateSubTenant, deleteSubTenant,
+      teamMembers, inviteTeamMember, updateTeamMemberActive,
       layouts, getLayoutsForClient, saveLayout, updateLayout, deleteLayout,
       conversionLogs, logConversion,
     }}>

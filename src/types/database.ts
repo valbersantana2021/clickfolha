@@ -14,7 +14,9 @@ export interface Profile {
   id: string
   tenant_id: string
   full_name: string
+  email: string
   role: 'admin' | 'operator'
+  active: boolean
   created_at: string
 }
 
