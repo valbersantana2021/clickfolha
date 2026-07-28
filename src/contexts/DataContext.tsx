@@ -42,6 +42,7 @@ interface DataContextValue {
 
   subTenants: SubTenant[]
   createSubTenant: (data: { name: string; cod_empresa: string; cnpj?: string }) => Promise<SubTenant>
+  updateSubTenant: (id: string, data: { name: string; cod_empresa: string; cnpj?: string }) => Promise<void>
   deleteSubTenant: (id: string) => Promise<void>
 
   layouts: Layout[]
@@ -123,6 +124,17 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     return data
   }, [tenant])
 
+  const updateSubTenant = useCallback(async (id: string, { name, cod_empresa, cnpj }: { name: string; cod_empresa: string; cnpj?: string }) => {
+    const { data, error } = await supabase
+      .from('cf_sub_tenants')
+      .update({ name, cod_empresa, cnpj: cnpj ?? null })
+      .eq('id', id)
+      .select()
+      .single()
+    if (error) throw error
+    setSubTenants(prev => prev.map(s => s.id === id ? data : s))
+  }, [])
+
   const deleteSubTenant = useCallback(async (id: string) => {
     const { error } = await supabase.from('cf_sub_tenants').delete().eq('id', id)
     if (error) throw error
@@ -197,7 +209,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     <DataContext.Provider value={{
       loading,
       conversionLimit,
-      subTenants, createSubTenant, deleteSubTenant,
+      subTenants, createSubTenant, updateSubTenant, deleteSubTenant,
       layouts, getLayoutsForClient, saveLayout, updateLayout, deleteLayout,
       conversionLogs, logConversion,
     }}>

@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Building2, Plus, Trash2, LayoutTemplate, ArrowRightLeft, Calendar } from 'lucide-react'
+import { Building2, Plus, Trash2, Pencil, LayoutTemplate, ArrowRightLeft, Calendar } from 'lucide-react'
 import { toast } from 'sonner'
 import { useData } from '@/contexts/DataContext'
 import { AppLayout } from '@/components/AppLayout'
 import { formatCNPJ } from '@/lib/utils'
+import type { SubTenant } from '@/types/database'
 
 function formatDateTime(iso: string): string {
   const d = new Date(iso)
@@ -15,11 +16,12 @@ function formatDateTime(iso: string): string {
 }
 
 export function ClientsPage() {
-  const { subTenants, createSubTenant, deleteSubTenant, getLayoutsForClient } = useData()
+  const { subTenants, createSubTenant, updateSubTenant, deleteSubTenant, getLayoutsForClient } = useData()
   const [newName, setNewName] = useState('')
   const [newCnpj, setNewCnpj] = useState('')
   const [newCodEmpresa, setNewCodEmpresa] = useState('')
   const [showForm, setShowForm] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
 
   useEffect(() => { document.title = 'Clientes | ClickFolha' }, [])
@@ -28,18 +30,34 @@ export function ClientsPage() {
 
   const resetForm = () => { setNewName(''); setNewCnpj(''); setNewCodEmpresa('') }
 
-  const handleCreate = async () => {
+  const closeForm = () => { setShowForm(false); setEditingId(null); resetForm() }
+
+  const openCreateForm = () => { resetForm(); setEditingId(null); setShowForm(true) }
+
+  const openEditForm = (client: SubTenant) => {
+    setNewName(client.name)
+    setNewCnpj(client.cnpj ?? '')
+    setNewCodEmpresa(client.cod_empresa)
+    setEditingId(client.id)
+    setShowForm(true)
+  }
+
+  const handleSave = async () => {
     const name = newName.trim()
     const codEmpresa = newCodEmpresa.trim()
     if (!name || !codEmpresa) return
     setSaving(true)
     try {
-      await createSubTenant({ name, cod_empresa: codEmpresa, cnpj: newCnpj.trim() || undefined })
-      resetForm()
-      setShowForm(false)
-      toast.success(`Cliente "${name}" criado.`)
+      if (editingId) {
+        await updateSubTenant(editingId, { name, cod_empresa: codEmpresa, cnpj: newCnpj.trim() || undefined })
+        toast.success(`Cliente "${name}" atualizado.`)
+      } else {
+        await createSubTenant({ name, cod_empresa: codEmpresa, cnpj: newCnpj.trim() || undefined })
+        toast.success(`Cliente "${name}" criado.`)
+      }
+      closeForm()
     } catch {
-      toast.error('Erro ao criar cliente. Tente novamente.')
+      toast.error(editingId ? 'Erro ao atualizar cliente. Tente novamente.' : 'Erro ao criar cliente. Tente novamente.')
     }
     setSaving(false)
   }
@@ -65,7 +83,7 @@ export function ClientsPage() {
           </p>
         </div>
         <button
-          onClick={() => setShowForm(true)}
+          onClick={openCreateForm}
           className="flex items-center gap-2 rounded-lg bg-fg-brand px-4 py-2 text-sm font-medium text-white transition hover:bg-fg-brand-2"
         >
           <Plus className="h-4 w-4" />
@@ -73,10 +91,12 @@ export function ClientsPage() {
         </button>
       </div>
 
-      {/* Create form */}
+      {/* Create / edit form */}
       {showForm && (
         <div className="mb-6 rounded-xl border bg-white p-5 shadow-sm">
-          <p className="mb-4 text-sm font-medium text-fg-cream">Novo cliente</p>
+          <p className="mb-4 text-sm font-medium text-fg-cream">
+            {editingId ? 'Editar cliente' : 'Novo cliente'}
+          </p>
           <div className="mb-3 grid grid-cols-3 gap-3">
             <div>
               <label className="mb-1 block text-xs font-medium text-fg-muted">Código da Empresa *</label>
@@ -84,7 +104,7 @@ export function ClientsPage() {
                 autoFocus
                 value={newCodEmpresa}
                 onChange={e => setNewCodEmpresa(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') handleCreate(); if (e.key === 'Escape') { setShowForm(false); resetForm() } }}
+                onKeyDown={e => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') closeForm() }}
                 placeholder="Ex: 0006"
                 className="w-full rounded-lg border border-fg-hairline px-3 py-2 text-sm focus:border-fg-brand focus:outline-none focus:ring-1 focus:ring-fg-brand"
               />
@@ -94,7 +114,7 @@ export function ClientsPage() {
               <input
                 value={newCnpj}
                 onChange={e => setNewCnpj(formatCNPJ(e.target.value))}
-                onKeyDown={e => { if (e.key === 'Enter') handleCreate(); if (e.key === 'Escape') { setShowForm(false); resetForm() } }}
+                onKeyDown={e => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') closeForm() }}
                 placeholder="00.000.000/0000-00"
                 className="w-full rounded-lg border border-fg-hairline px-3 py-2 text-sm focus:border-fg-brand focus:outline-none focus:ring-1 focus:ring-fg-brand"
               />
@@ -104,7 +124,7 @@ export function ClientsPage() {
               <input
                 value={newName}
                 onChange={e => setNewName(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') handleCreate(); if (e.key === 'Escape') { setShowForm(false); resetForm() } }}
+                onKeyDown={e => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') closeForm() }}
                 placeholder="Ex: Padaria São João Ltda"
                 className="w-full rounded-lg border border-fg-hairline px-3 py-2 text-sm focus:border-fg-brand focus:outline-none focus:ring-1 focus:ring-fg-brand"
               />
@@ -112,13 +132,13 @@ export function ClientsPage() {
           </div>
           <div className="flex justify-end gap-3">
             <button
-              onClick={() => { setShowForm(false); resetForm() }}
+              onClick={closeForm}
               className="rounded-lg border px-4 py-2 text-sm text-fg-muted transition hover:bg-fg-ink-3"
             >
               Cancelar
             </button>
             <button
-              onClick={handleCreate}
+              onClick={handleSave}
               disabled={!newName.trim() || !newCodEmpresa.trim() || saving}
               className="rounded-lg bg-fg-brand px-4 py-2 text-sm font-medium text-white transition hover:bg-fg-brand-2 disabled:opacity-50"
             >
@@ -137,7 +157,7 @@ export function ClientsPage() {
             Adicione seu primeiro cliente para começar a configurar layouts de conversão.
           </p>
           <button
-            onClick={() => setShowForm(true)}
+            onClick={openCreateForm}
             className="mt-4 flex items-center gap-2 rounded-lg bg-fg-brand px-4 py-2 text-sm font-medium text-white transition hover:bg-fg-brand-2"
           >
             <Plus className="h-4 w-4" />
@@ -194,6 +214,14 @@ export function ClientsPage() {
                     <LayoutTemplate className="h-3.5 w-3.5" />
                     Layouts ({clientLayouts.length})
                   </Link>
+
+                  <button
+                    onClick={() => openEditForm(client)}
+                    className="rounded-lg p-1.5 text-fg-muted transition hover:bg-fg-ink-3 hover:text-fg-cream"
+                    title="Editar cliente"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </button>
 
                   {confirmDelete === client.id ? (
                     <div className="flex items-center gap-1">
