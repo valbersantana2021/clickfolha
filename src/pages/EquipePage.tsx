@@ -160,15 +160,17 @@ export function EquipePage() {
                   <span>Desde {formatDateTime(member.created_at)}</span>
                 </div>
               </div>
-              <button
-                onClick={() => handleToggleActive(member.id, member.active)}
-                disabled={pendingId === member.id}
-                className={`rounded-lg px-4 py-2 text-sm font-medium text-white transition disabled:opacity-50 ${
-                  member.active ? 'bg-red-500 hover:bg-red-600' : 'bg-fg-brand hover:bg-fg-brand-2'
-                }`}
-              >
-                {pendingId === member.id ? 'Salvando...' : member.active ? 'Desativar' : 'Reativar'}
-              </button>
+              {member.id !== profile?.id && (
+                <button
+                  onClick={() => handleToggleActive(member.id, member.active)}
+                  disabled={pendingId === member.id}
+                  className={`rounded-lg px-4 py-2 text-sm font-medium text-white transition disabled:opacity-50 ${
+                    member.active ? 'bg-red-500 hover:bg-red-600' : 'bg-fg-brand hover:bg-fg-brand-2'
+                  }`}
+                >
+                  {pendingId === member.id ? 'Salvando...' : member.active ? 'Desativar' : 'Reativar'}
+                </button>
+              )}
             </div>
           ))}
         </div>

@@ -66,7 +66,7 @@ This repo uses SpecKit for spec-driven development. The workflows are in `.speci
 
 Build these in order:
 1. Supabase schema + RLS policies
-2. Supabase Auth (email/password) + Tenant auto-creation on sign-up
+2. Supabase Auth (email/password), invite-only — platform admin creates tenants and invites each one's first admin; tenant admins invite additional admins/operators into their own tenant only (no public self-service signup)
 3. Sub-tenant CRUD (Tenant Admin only)
 4. Layout Wizard with Auto-Detect (scan Excel headers for keywords: Matrícula, Codigo, Valor, Horas)
 5. Client-side rule engine (SheetJS → config_json → CSV)

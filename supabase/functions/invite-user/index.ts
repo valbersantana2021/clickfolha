@@ -56,14 +56,23 @@ Deno.serve(async (req) => {
       .eq('user_id', user.id)
       .maybeSingle()
 
+    // Branch on INTENT (did the caller send organization fields?), not just
+    // identity — a platform admin is *also* a tenant admin of their own
+    // company and must be able to invite into it via this same endpoint,
+    // without sending organization_name/razao_social/cnpj.
+    const organizationName = payload.organization_name?.trim()
+    const wantsNewTenant = !!organizationName
+
     let tenantId: string
     let role: 'admin' | 'operator'
 
-    if (platformAdminRow) {
-      const organizationName = payload.organization_name?.trim()
+    if (wantsNewTenant) {
+      if (!platformAdminRow) {
+        return json({ message: 'Sem permissão para criar empresas.' }, 403)
+      }
       const razaoSocial = payload.razao_social?.trim()
       const cnpj = payload.cnpj?.trim()
-      if (!organizationName || !razaoSocial || !cnpj) {
+      if (!razaoSocial || !cnpj) {
         return json({ message: 'Nome, razão social e CNPJ da empresa são obrigatórios.' }, 400)
       }
       const { data: newTenant, error: tenantError } = await adminClient
@@ -93,6 +102,11 @@ Deno.serve(async (req) => {
     )
 
     if (inviteError || !invited?.user) {
+      // Roll back the tenant we just created if the invite itself failed,
+      // so a retry doesn't leave an admin-less orphan tenant behind.
+      if (wantsNewTenant) {
+        await adminClient.from('cf_tenants').delete().eq('id', tenantId)
+      }
       const alreadyExists = (inviteError?.message ?? '').toLowerCase().includes('already')
       return json(
         { message: alreadyExists ? 'Este e-mail já está cadastrado.' : 'Erro ao enviar convite.' },
@@ -110,6 +124,12 @@ Deno.serve(async (req) => {
     })
 
     if (profileError) {
+      // Roll back the auth user (and tenant, if we created one) so the
+      // invite isn't left in an unrecoverable half-created state.
+      await adminClient.auth.admin.deleteUser(invited.user.id)
+      if (wantsNewTenant) {
+        await adminClient.from('cf_tenants').delete().eq('id', tenantId)
+      }
       return json({ message: 'Convite enviado, mas houve erro ao vincular o perfil.' }, 500)
     }
 
