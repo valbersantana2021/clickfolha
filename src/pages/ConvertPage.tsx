@@ -102,7 +102,7 @@ function StepBar({ current }: { current: Step }) {
 
 export function ConvertPage() {
   const [searchParams] = useSearchParams()
-  const { tenant } = useAuth()
+  const { tenant, profile } = useAuth()
   const { subTenants, createSubTenant, getLayoutsForClient, saveLayout, logConversion, conversionLogs, conversionLimit } = useData()
 
   const thisMonth = new Date().toISOString().slice(0, 7)
@@ -472,13 +472,15 @@ export function ConvertPage() {
                   <option value="">— Selecione um cliente —</option>
                   {subTenants.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                 </select>
-                <button
-                  onClick={() => setShowNewClient(true)}
-                  className="mt-3 flex items-center gap-1.5 text-sm text-fg-ice hover:text-fg-brand"
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                  Novo cliente
-                </button>
+                {profile?.role === 'admin' && (
+                  <button
+                    onClick={() => setShowNewClient(true)}
+                    className="mt-3 flex items-center gap-1.5 text-sm text-fg-ice hover:text-fg-brand"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Novo cliente
+                  </button>
+                )}
               </>
             ) : (
               <div className="space-y-3">

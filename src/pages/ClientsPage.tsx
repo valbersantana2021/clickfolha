@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { Building2, Plus, Trash2, Pencil, LayoutTemplate, ArrowRightLeft, Calendar } from 'lucide-react'
 import { toast } from 'sonner'
 import { useData } from '@/contexts/DataContext'
+import { useAuth } from '@/contexts/AuthContext'
 import { AppLayout } from '@/components/AppLayout'
 import { formatCNPJ } from '@/lib/utils'
 import type { SubTenant } from '@/types/database'
@@ -17,6 +18,7 @@ function formatDateTime(iso: string): string {
 
 export function ClientsPage() {
   const { subTenants, createSubTenant, updateSubTenant, deleteSubTenant, getLayoutsForClient } = useData()
+  const { profile } = useAuth()
   const [newName, setNewName] = useState('')
   const [newCnpj, setNewCnpj] = useState('')
   const [newCodEmpresa, setNewCodEmpresa] = useState('')
@@ -82,13 +84,15 @@ export function ClientsPage() {
             Empresas que você atende. Cada cliente tem seus próprios layouts de conversão.
           </p>
         </div>
-        <button
-          onClick={openCreateForm}
-          className="flex items-center gap-2 rounded-lg bg-fg-brand px-4 py-2 text-sm font-medium text-white transition hover:bg-fg-brand-2"
-        >
-          <Plus className="h-4 w-4" />
-          Novo Cliente
-        </button>
+        {profile?.role === 'admin' && (
+          <button
+            onClick={openCreateForm}
+            className="flex items-center gap-2 rounded-lg bg-fg-brand px-4 py-2 text-sm font-medium text-white transition hover:bg-fg-brand-2"
+          >
+            <Plus className="h-4 w-4" />
+            Novo Cliente
+          </button>
+        )}
       </div>
 
       {/* Create / edit form */}
@@ -156,13 +160,15 @@ export function ClientsPage() {
           <p className="mt-1 text-sm text-fg-muted">
             Adicione seu primeiro cliente para começar a configurar layouts de conversão.
           </p>
-          <button
-            onClick={openCreateForm}
-            className="mt-4 flex items-center gap-2 rounded-lg bg-fg-brand px-4 py-2 text-sm font-medium text-white transition hover:bg-fg-brand-2"
-          >
-            <Plus className="h-4 w-4" />
-            Adicionar cliente
-          </button>
+          {profile?.role === 'admin' && (
+            <button
+              onClick={openCreateForm}
+              className="mt-4 flex items-center gap-2 rounded-lg bg-fg-brand px-4 py-2 text-sm font-medium text-white transition hover:bg-fg-brand-2"
+            >
+              <Plus className="h-4 w-4" />
+              Adicionar cliente
+            </button>
+          )}
         </div>
       )}
 
@@ -215,36 +221,40 @@ export function ClientsPage() {
                     Layouts ({clientLayouts.length})
                   </Link>
 
-                  <button
-                    onClick={() => openEditForm(client)}
-                    className="rounded-lg p-1.5 text-fg-muted transition hover:bg-fg-ink-3 hover:text-fg-cream"
-                    title="Editar cliente"
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </button>
-
-                  {confirmDelete === client.id ? (
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => handleDelete(client.id)}
-                        className="rounded-lg bg-red-500 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-red-600"
-                      >
-                        Confirmar
-                      </button>
-                      <button
-                        onClick={() => setConfirmDelete(null)}
-                        className="rounded-lg border px-3 py-1.5 text-xs text-fg-muted transition hover:bg-fg-ink-3"
-                      >
-                        Cancelar
-                      </button>
-                    </div>
-                  ) : (
+                  {profile?.role === 'admin' && (
                     <button
-                      onClick={() => setConfirmDelete(client.id)}
-                      className="rounded-lg p-1.5 text-fg-muted transition hover:bg-red-50 hover:text-red-500"
+                      onClick={() => openEditForm(client)}
+                      className="rounded-lg p-1.5 text-fg-muted transition hover:bg-fg-ink-3 hover:text-fg-cream"
+                      title="Editar cliente"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Pencil className="h-4 w-4" />
                     </button>
+                  )}
+
+                  {profile?.role === 'admin' && (
+                    confirmDelete === client.id ? (
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => handleDelete(client.id)}
+                          className="rounded-lg bg-red-500 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-red-600"
+                        >
+                          Confirmar
+                        </button>
+                        <button
+                          onClick={() => setConfirmDelete(null)}
+                          className="rounded-lg border px-3 py-1.5 text-xs text-fg-muted transition hover:bg-fg-ink-3"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setConfirmDelete(client.id)}
+                        className="rounded-lg p-1.5 text-fg-muted transition hover:bg-red-50 hover:text-red-500"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )
                   )}
                 </div>
               </div>
