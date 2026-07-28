@@ -1,6 +1,6 @@
 import { useCallback } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
-import { FileSpreadsheet, LogOut, History, Users, LayoutDashboard, ArrowRightLeft, ShieldCheck } from 'lucide-react'
+import { FileSpreadsheet, LogOut, History, Users, LayoutDashboard, ArrowRightLeft, ShieldCheck, UserCog } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 
 interface AppLayoutProps {
@@ -54,6 +54,21 @@ export function AppLayout({ children }: AppLayoutProps) {
                   {label}
                 </NavLink>
               ))}
+              {profile?.role === 'admin' && (
+                <NavLink
+                  to="/team"
+                  className={({ isActive }) =>
+                    `flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                      isActive
+                        ? 'bg-fg-ink-3 text-fg-cream'
+                        : 'text-fg-muted hover:bg-fg-ink-3 hover:text-fg-cream'
+                    }`
+                  }
+                >
+                  <UserCog className="h-3.5 w-3.5" />
+                  Equipe
+                </NavLink>
+              )}
               {isPlatformAdmin && (
                 <NavLink
                   to="/admin"
